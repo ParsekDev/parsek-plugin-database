@@ -101,8 +101,8 @@ tasks {
 publishing {
     repositories {
         maven {
-            name = "parsek-database"
-            url = uri("https://maven.pkg.github.com/StatuParsek/parsek-database")
+            name = "parsek-plugin-database"
+            url = uri("https://maven.pkg.github.com/StatuParsek/parsek-plugin-database")
             credentials {
                 username = project.findProperty("gpr.user") as String? ?: System.getenv("USERNAME_GITHUB")
                 password = project.findProperty("gpr.token") as String? ?: System.getenv("TOKEN_GITHUB")
@@ -113,7 +113,7 @@ publishing {
     publications {
         create<MavenPublication>("shadow") {
             project.extensions.configure<com.github.jengelman.gradle.plugins.shadow.ShadowExtension> {
-                artifactId = "parsek-database-plugin"
+                artifactId = "parsek-plugin-database"
                 component(this@create)
             }
         }
