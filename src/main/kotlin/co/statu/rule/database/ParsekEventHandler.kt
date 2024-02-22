@@ -26,6 +26,12 @@ class ParsekEventHandler : ParsekEventListener {
             logger
         )
 
+        databaseManager.migrateNewPluginId(
+            "database",
+            DatabasePlugin.INSTANCE.context.pluginId,
+            DatabasePlugin.INSTANCE
+        )
+
         databaseManager.initialize(DatabasePlugin.INSTANCE, tables, migrations)
 
         val handlers = DatabasePlugin.INSTANCE.context.pluginEventManager.getEventHandlers<DatabaseEventListener>()

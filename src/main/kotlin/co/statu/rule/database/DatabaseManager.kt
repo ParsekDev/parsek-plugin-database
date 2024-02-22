@@ -166,6 +166,17 @@ class DatabaseManager(
         checkMigration(plugin, jdbcPool, lastSchemeVersion)
     }
 
+    suspend fun migrateNewPluginId(exPluginId: String, newPluginId: String, plugin: ParsekPlugin) {
+        try {
+            schemeVersionDaoImpl.renamePluginId(exPluginId, newPluginId, getConnectionPool())
+        } catch (e: Exception) {
+            if (plugin !is DatabasePlugin) {
+                logger.error(e.message)
+                exitProcess(1)
+            }
+        }
+    }
+
     internal fun getLatestMigration(plugin: ParsekPlugin) = migrations[plugin]?.maxByOrNull { it.SCHEME_VERSION }
 
     suspend fun checkMigration(plugin: ParsekPlugin, jdbcPool: JDBCPool, lastSchemeVersion: SchemeVersion?) {

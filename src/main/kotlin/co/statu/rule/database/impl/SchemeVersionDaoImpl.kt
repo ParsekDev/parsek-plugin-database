@@ -63,4 +63,18 @@ class SchemeVersionDaoImpl : SchemeVersionDao() {
 
         return row.toEntity()
     }
+
+    override suspend fun renamePluginId(
+        exPluginId: String,
+        newPluginId: String,
+        jdbcPool: JDBCPool
+    ) {
+        val query =
+            "ALTER TABLE `${getTablePrefix() + tableName}` UPDATE `pluginId` = ? WHERE `pluginId` = ?;"
+
+        jdbcPool
+            .preparedQuery(query)
+            .execute(Tuple.of(newPluginId, exPluginId))
+            .await()
+    }
 }

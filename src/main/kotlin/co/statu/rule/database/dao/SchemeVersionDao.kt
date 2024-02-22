@@ -14,4 +14,10 @@ abstract class SchemeVersionDao : Dao<SchemeVersion>(SchemeVersion::class) {
         pluginId: String,
         jdbcPool: JDBCPool
     ): SchemeVersion?
+
+    abstract suspend fun renamePluginId(
+        exPluginId: String,
+        newPluginId: String,
+        jdbcPool: JDBCPool
+    )
 }
