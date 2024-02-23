@@ -15,7 +15,8 @@ class ParsekEventHandler : ParsekEventListener {
             configManager,
             DatabasePlugin.INSTANCE,
             DatabaseConfig::class.java,
-            logger
+            logger,
+            exPluginIds = listOf("database")
         )
 
         logger.info("Initialized plugin config")
