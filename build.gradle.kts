@@ -83,20 +83,16 @@ tasks {
 
     register("copyJar") {
         pluginsDir?.let {
-            doLast {
-                copy {
-                    from(shadowJar.get().archiveFile.get().asFile.absolutePath)
-                    into(it)
-                }
+            copy {
+                from(shadowJar.get().archiveFile.get().asFile.absolutePath)
+                into(it)
             }
         }
     }
 
     build {
         dependsOn(shadowJar)
-        doLast {
-            dependsOn("copyJar")
-        }
+        dependsOn("copyJar")
     }
 }
 
