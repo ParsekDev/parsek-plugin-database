@@ -52,10 +52,6 @@ dependencies {
     implementation("org.apache.httpcomponents.client5:httpclient5:5.3")
 }
 
-tasks.named("jar").configure {
-    enabled = false
-}
-
 tasks {
     shadowJar {
         val pluginId: String by project
@@ -90,7 +86,8 @@ tasks {
         }
     }
 
-    build {
+    jar {
+        enabled = false
         dependsOn(shadowJar)
         dependsOn("copyJar")
     }
