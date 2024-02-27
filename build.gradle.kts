@@ -79,11 +79,16 @@ tasks {
 
     register("copyJar") {
         pluginsDir?.let {
-            copy {
-                from(shadowJar.get().archiveFile.get().asFile.absolutePath)
-                into(it)
+            doLast {
+                copy {
+                    from(shadowJar.get().archiveFile.get().asFile.absolutePath)
+                    into(it)
+                }
             }
         }
+
+        outputs.upToDateWhen { false }
+        mustRunAfter(shadowJar)
     }
 
     jar {
