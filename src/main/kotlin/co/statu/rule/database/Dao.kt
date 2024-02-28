@@ -32,7 +32,7 @@ abstract class Dao<T : DBEntity>(private val entityClass: KClass<T>) {
             .map { it.name!! }
     }
 
-    fun List<String>.toTableQuery() = this.joinToString(", ") { "`$it`" }
+    fun List<String>.toTableQuery(prefix: String = "") = this.joinToString(", ") { "$prefix`$it`" }
 
     abstract suspend fun init(jdbcPool: JDBCPool, plugin: ParsekPlugin)
 
