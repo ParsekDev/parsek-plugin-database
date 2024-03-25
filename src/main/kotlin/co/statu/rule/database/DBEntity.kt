@@ -1,5 +1,6 @@
 package co.statu.rule.database
 
+import co.statu.parsek.PluginEventManager
 import co.statu.rule.database.deserializer.JsonObjectDeserializer
 import co.statu.rule.database.event.DatabaseEventListener
 import com.google.gson.GsonBuilder
@@ -15,10 +16,7 @@ abstract class DBEntity {
 
             gsonBuilder.registerTypeAdapter(JsonObject::class.java, JsonObjectDeserializer())
 
-            val context = DatabasePlugin.INSTANCE.context
-            val pluginEventManager = context.pluginEventManager
-
-            val databaseEventHandlers = pluginEventManager.getEventHandlers<DatabaseEventListener>()
+            val databaseEventHandlers = PluginEventManager.getEventListeners<DatabaseEventListener>()
 
             databaseEventHandlers.forEach { it.onGsonBuild(gsonBuilder) }
 

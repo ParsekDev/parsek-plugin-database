@@ -3,7 +3,6 @@ package co.statu.rule.database
 import co.statu.parsek.api.ParsekPlugin
 import co.statu.parsek.util.TextUtil.convertToSnakeCase
 import co.statu.rule.database.DBEntity.Companion.gson
-import co.statu.rule.database.DatabasePlugin.Companion.databaseManager
 import io.vertx.jdbcclient.JDBCPool
 import io.vertx.kotlin.coroutines.await
 import io.vertx.sqlclient.Row
@@ -36,7 +35,7 @@ abstract class Dao<T : DBEntity>(private val entityClass: KClass<T>) {
 
     abstract suspend fun init(jdbcPool: JDBCPool, plugin: ParsekPlugin)
 
-    fun getTablePrefix(): String = databaseManager.getTablePrefix()
+    fun getTablePrefix(): String = DatabasePlugin.databaseManager.getTablePrefix()
 
     suspend fun count(
         jdbcPool: JDBCPool

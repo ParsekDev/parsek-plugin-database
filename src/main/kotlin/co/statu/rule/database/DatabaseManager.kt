@@ -2,20 +2,30 @@ package co.statu.rule.database
 
 import co.statu.parsek.api.ParsekPlugin
 import co.statu.parsek.api.config.PluginConfigManager
+import co.statu.rule.database.api.DatabaseHelper
 import co.statu.rule.database.impl.SchemeVersionDaoImpl
 import co.statu.rule.database.model.SchemeVersion
 import io.vertx.core.Vertx
 import io.vertx.core.json.JsonObject
 import io.vertx.jdbcclient.JDBCPool
 import org.slf4j.Logger
+import org.springframework.beans.factory.config.ConfigurableBeanFactory
+import org.springframework.context.annotation.Scope
+import org.springframework.stereotype.Component
 import java.sql.BatchUpdateException
 import kotlin.system.exitProcess
 
+@Component
+@Scope(value = ConfigurableBeanFactory.SCOPE_SINGLETON)
 class DatabaseManager(
     private val vertx: Vertx,
-    private val pluginConfigManager: PluginConfigManager<DatabaseConfig>,
     private val logger: Logger,
+    private val databasePlugin: DatabasePlugin
 ) {
+    private val pluginConfigManager by lazy {
+        databasePlugin.pluginBeanContext.getBean(PluginConfigManager::class.java) as PluginConfigManager<DatabaseConfig>
+    }
+
     private lateinit var pool: JDBCPool
 
     private val tables = mutableMapOf<ParsekPlugin, MutableList<Dao<*>>>()
@@ -69,7 +79,7 @@ class DatabaseManager(
     }
 
     private suspend fun initSchemeVersion(plugin: ParsekPlugin, jdbcPool: JDBCPool) {
-        val lastSchemeVersion = schemeVersionDaoImpl.getLastSchemeVersion(plugin.context.pluginId, jdbcPool)
+        val lastSchemeVersion = schemeVersionDaoImpl.getLastSchemeVersion(plugin.pluginId, jdbcPool)
 
         val latestMigration = getLatestMigration(plugin)
 
@@ -80,9 +90,9 @@ class DatabaseManager(
         if (latestMigration == null) {
             schemeVersionDaoImpl.add(
                 SchemeVersion(
-                    pluginId = plugin.context.pluginId,
+                    pluginId = plugin.pluginId,
                     version = 1,
-                    extra = "Init ${plugin.context.pluginId}"
+                    extra = "Init ${plugin.pluginId}"
                 ),
                 jdbcPool
             )
@@ -92,7 +102,7 @@ class DatabaseManager(
 
         schemeVersionDaoImpl.add(
             SchemeVersion(
-                pluginId = plugin.context.pluginId,
+                pluginId = plugin.pluginId,
                 version = latestMigration.SCHEME_VERSION,
                 extra = latestMigration.SCHEME_VERSION_INFO
             ),
@@ -105,13 +115,12 @@ class DatabaseManager(
 
         initTables(plugin)
 
-        logger.info("\"${plugin.context.pluginId}\"'s database has been initialized")
+        logger.info("\"${plugin.pluginId}\"'s database has been initialized")
     }
 
     suspend fun initialize(
         plugin: ParsekPlugin,
-        tables: List<Dao<*>>,
-        migrations: List<DatabaseMigration>
+        databaseHelper: DatabaseHelper? = null
     ) {
         if (this.tables[plugin] == null) {
             this.tables[plugin] = mutableListOf()
@@ -121,14 +130,15 @@ class DatabaseManager(
             this.migrations[plugin] = mutableListOf()
         }
 
-        this.tables[plugin]!!.addAll(tables)
-        this.migrations[plugin]!!.addAll(migrations)
+        databaseHelper?.tables?.let { this.tables[plugin]!!.addAll(it) }
+        databaseHelper?.migrations?.let { this.migrations[plugin]!!.addAll(it) }
 
         val jdbcPool: JDBCPool
 
         try {
             jdbcPool = getConnectionPool()
         } catch (e: Exception) {
+            e.printStackTrace()
             logger.info("Connection to database failed! Shutting down...")
 
             exitProcess(1)
@@ -137,7 +147,7 @@ class DatabaseManager(
         val lastSchemeVersion: SchemeVersion?
 
         try {
-            lastSchemeVersion = schemeVersionDaoImpl.getLastSchemeVersion(plugin.context.pluginId, jdbcPool)
+            lastSchemeVersion = schemeVersionDaoImpl.getLastSchemeVersion(plugin.pluginId, jdbcPool)
         } catch (e: BatchUpdateException) {
             try {
                 if (plugin is DatabasePlugin) {
@@ -151,7 +161,7 @@ class DatabaseManager(
                 return
             } catch (e: Exception) {
                 logger.error(e.message)
-                logger.error("Database Error: Could not install plugin \"${plugin.context.pluginId}\". Shutting down...")
+                logger.error("Database Error: Could not install plugin \"${plugin.pluginId}\". Shutting down...")
 
                 exitProcess(1)
             }
@@ -180,7 +190,7 @@ class DatabaseManager(
     internal fun getLatestMigration(plugin: ParsekPlugin) = migrations[plugin]?.maxByOrNull { it.SCHEME_VERSION }
 
     suspend fun checkMigration(plugin: ParsekPlugin, jdbcPool: JDBCPool, lastSchemeVersion: SchemeVersion?) {
-        logger.info("Checking available database migrations for \"${plugin.context.pluginId}\"")
+        logger.info("Checking available database migrations for \"${plugin.pluginId}\"")
 
         val databaseVersion = lastSchemeVersion?.version ?: 0
 
@@ -196,7 +206,7 @@ class DatabaseManager(
     private suspend fun updateSchemeVersion(version: Int, info: String, plugin: ParsekPlugin, jdbcPool: JDBCPool) {
         schemeVersionDaoImpl.add(
             SchemeVersion(
-                pluginId = plugin.context.pluginId,
+                pluginId = plugin.pluginId,
                 version = version,
                 extra = info
             ),
