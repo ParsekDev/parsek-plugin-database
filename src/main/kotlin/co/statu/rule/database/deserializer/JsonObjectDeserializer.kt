@@ -8,7 +8,7 @@ import java.lang.reflect.Type
 
 class JsonObjectDeserializer : JsonDeserializer<JsonObject> {
     override fun deserialize(json: JsonElement, typeOfT: Type, context: JsonDeserializationContext): JsonObject {
-        val jsonAsString = json.asString.replace("\"},", "\"}")
+        val jsonAsString = json.asString
 
         return JsonObject(jsonAsString)
     }
