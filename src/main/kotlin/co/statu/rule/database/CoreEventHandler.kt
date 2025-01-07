@@ -19,10 +19,8 @@ class CoreEventHandler(
 
     override suspend fun onConfigManagerReady(configManager: ConfigManager) {
         val pluginConfigManager = PluginConfigManager(
-            configManager,
             databasePlugin,
             DatabaseConfig::class.java,
-            exPluginIds = listOf("database")
         )
         databasePlugin.pluginBeanContext.beanFactory.registerSingleton(
             pluginConfigManager.javaClass.name,
