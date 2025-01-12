@@ -9,14 +9,16 @@ import co.statu.rule.database.DatabaseConfig
 import co.statu.rule.database.DatabaseManager
 import co.statu.rule.database.DatabasePlugin
 import org.slf4j.Logger
-import org.springframework.context.annotation.Lazy
 
 @EventListener
 class CoreEventHandler(
     private val logger: Logger,
     private val databasePlugin: DatabasePlugin,
-    @Lazy private val databaseManager: DatabaseManager
 ) : CoreEventListener {
+    private val databaseManager by lazy {
+        databasePlugin.pluginBeanContext.getBean(DatabaseManager::class.java)
+    }
+
     override suspend fun onConfigManagerReady(configManager: ConfigManager) {
         val pluginConfigManager = PluginConfigManager(
             databasePlugin,

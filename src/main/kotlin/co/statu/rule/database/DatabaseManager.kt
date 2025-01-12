@@ -10,7 +10,6 @@ import io.vertx.core.json.JsonObject
 import io.vertx.jdbcclient.JDBCPool
 import org.slf4j.Logger
 import org.springframework.beans.factory.config.ConfigurableBeanFactory
-import org.springframework.context.annotation.Lazy
 import org.springframework.context.annotation.Scope
 import org.springframework.stereotype.Component
 import java.sql.BatchUpdateException
@@ -21,8 +20,12 @@ import kotlin.system.exitProcess
 class DatabaseManager(
     private val vertx: Vertx,
     private val logger: Logger,
-    @Lazy private val pluginConfigManager: PluginConfigManager<DatabaseConfig>
+    private val databasePlugin: DatabasePlugin
 ) {
+    private val pluginConfigManager by lazy {
+        databasePlugin.pluginBeanContext.getBean(PluginConfigManager::class.java) as PluginConfigManager<DatabaseConfig>
+    }
+
     private lateinit var pool: JDBCPool
 
     private val tables = mutableMapOf<ParsekPlugin, MutableList<Dao<*>>>()
