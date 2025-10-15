@@ -19,7 +19,7 @@ class CoreEventHandler(
         databasePlugin.pluginBeanContext.getBean(DatabaseManager::class.java)
     }
 
-    override suspend fun onConfigManagerReady(configManager: ConfigManager) {
+    override suspend fun onConfigManagerDone(configManager: ConfigManager) {
         val pluginConfigManager = PluginConfigManager(
             databasePlugin,
             DatabaseConfig::class.java,
