@@ -71,22 +71,17 @@ jobs:
           -Pversion=${{ needs.get-next-version.outputs.new_tag_version }} \
           -PtimeStamp=${{ steps.time.outputs.time }}
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "lts/*"
+
       - name: Publish to Maven Central with JReleaser
         run: |
           ./gradlew -Pversion=${{ needs.get-next-version.outputs.new_tag_version }} publish
         env:
           GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
           GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: "lts/*"
-
-      - name: Release
-        env:
-          GITHUB_TOKEN: ${{ secrets.TOKEN_GITHUB }}
-        run: npx semantic-release
 
       - name: Deploy to Maven Central with JReleaser
         run: |
@@ -107,3 +102,8 @@ jobs:
           path: |
             build/jreleaser/trace.log
             build/jreleaser/output.properties
+
+      - name: Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.TOKEN_GITHUB }}
+        run: npx semantic-release
