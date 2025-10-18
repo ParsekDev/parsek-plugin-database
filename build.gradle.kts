@@ -82,9 +82,9 @@ tasks {
         }
 
         if (version != "unspecified") {
-            archiveFileName.set("${rootProject.name}-v${version}.jar")
+            archiveFileName.set("$pluginId-v${version}.jar")
         } else {
-            archiveFileName.set("${rootProject.name}.jar")
+            archiveFileName.set("$pluginId.jar")
         }
 
         if (project.gradle.startParameter.taskNames.contains("publish")) {
