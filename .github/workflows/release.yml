@@ -1,4 +1,4 @@
-name: Parsek Database Plugin Release
+name: Parsek Plugin Release
 
 on:
   push:
@@ -78,10 +78,16 @@ jobs:
         with:
           node-version: "lts/*"
 
-      - name: Install deps for semantic-release
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-artifacts
+          path: build/libs/
+
+      - name: Verify downloaded artifacts
         run: |
-          npm ci
-        # Eğer package.json yoksa bu adımı kaldırabilirsiniz
+          echo "Contents of build/libs:"
+          ls -la build/libs || true
 
       - name: Create GitHub Release with semantic-release
         env:
@@ -117,6 +123,14 @@ jobs:
 
       - name: Verify downloaded artifacts
         run: ls -R build/libs
+
+      - name: Publish to Maven Central with JReleaser
+        run: |
+          ./gradlew -Pversion=${{ needs.get-next-version.outputs.new_tag_version }} publish
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+
 
       - name: Deploy to Maven Central with JReleaser
         id: jreleaser
