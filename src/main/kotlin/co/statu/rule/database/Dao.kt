@@ -4,7 +4,8 @@ import co.statu.parsek.api.ParsekPlugin
 import co.statu.parsek.util.TextUtil.convertToSnakeCase
 import co.statu.rule.database.DBEntity.Companion.gson
 import io.vertx.jdbcclient.JDBCPool
-import io.vertx.kotlin.coroutines.await
+import io.vertx.sqlclient.Pool
+import io.vertx.kotlin.coroutines.*
 import io.vertx.sqlclient.Row
 import io.vertx.sqlclient.RowSet
 import io.vertx.sqlclient.Tuple
@@ -33,12 +34,12 @@ abstract class Dao<T : DBEntity>(private val entityClass: KClass<T>) {
 
     fun List<String>.toTableQuery(prefix: String = "") = this.joinToString(", ") { "$prefix`$it`" }
 
-    abstract suspend fun init(jdbcPool: JDBCPool, plugin: ParsekPlugin)
+    abstract suspend fun init(jdbcPool: Pool, plugin: ParsekPlugin)
 
     fun getTablePrefix(): String = DatabasePlugin.databaseManager.getTablePrefix()
 
     suspend fun count(
-        jdbcPool: JDBCPool
+        jdbcPool: Pool
     ): Long {
         val query =
             "SELECT COUNT(*) FROM `${getTablePrefix() + tableName}`"
@@ -46,14 +47,14 @@ abstract class Dao<T : DBEntity>(private val entityClass: KClass<T>) {
         val rows: RowSet<Row> = jdbcPool
             .preparedQuery(query)
             .execute()
-            .await()
+            .coAwait()
 
         return rows.toList()[0].getLong(0)
     }
 
     suspend fun byId(
         id: UUID,
-        jdbcPool: JDBCPool
+        jdbcPool: Pool
     ): T? {
         val query =
             "SELECT ${fields.toTableQuery()} FROM `${getTablePrefix() + tableName}` WHERE `id` = ?"
@@ -61,7 +62,7 @@ abstract class Dao<T : DBEntity>(private val entityClass: KClass<T>) {
         val rows: RowSet<Row> = jdbcPool
             .preparedQuery(query)
             .execute(Tuple.of(id))
-            .await()
+            .coAwait()
 
         if (rows.size() == 0) {
             return null

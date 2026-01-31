@@ -7,7 +7,10 @@ import co.statu.rule.database.impl.SchemeVersionDaoImpl
 import co.statu.rule.database.model.SchemeVersion
 import io.vertx.core.Vertx
 import io.vertx.core.json.JsonObject
+import io.vertx.jdbcclient.JDBCConnectOptions
 import io.vertx.jdbcclient.JDBCPool
+import io.vertx.sqlclient.Pool
+import io.vertx.sqlclient.PoolOptions
 import org.slf4j.Logger
 import org.springframework.beans.factory.config.ConfigurableBeanFactory
 import org.springframework.context.annotation.Scope
@@ -26,7 +29,7 @@ class DatabaseManager(
         databasePlugin.pluginBeanContext.getBean(PluginConfigManager::class.java) as PluginConfigManager<DatabaseConfig>
     }
 
-    private lateinit var pool: JDBCPool
+    private lateinit var pool: Pool
 
     private val tables = mutableMapOf<ParsekPlugin, MutableList<Dao<*>>>()
     private val migrations = mutableMapOf<ParsekPlugin, MutableList<DatabaseMigration>>()
@@ -35,7 +38,7 @@ class DatabaseManager(
 
     fun getTablePrefix(): String = pluginConfigManager.config.prefix
 
-    fun getConnectionPool(): JDBCPool {
+    fun getConnectionPool(): Pool {
         if (!::pool.isInitialized) {
             val databaseConfig = pluginConfigManager.config
 
@@ -44,19 +47,23 @@ class DatabaseManager(
             val username = databaseConfig.username
             val password = databaseConfig.password
 
-            val config: JsonObject = JsonObject()
-                .put("url", "jdbc:clickhouse:$host/$name")
-                .put("driver_class", "com.clickhouse.jdbc.ClickHouseDriver")
-                .put("datasourceName", "parsek")
-                .put("username", username)
-                .put("max_pool_size", 100)
-
-            if (password != "") {
-                config
-                    .put("password", password)
+            try {
+                Class.forName("com.clickhouse.jdbc.ClickHouseDriver")
+            } catch (e: Exception) {
+                logger.error("Failed to load ClickHouse driver", e)
             }
 
-            pool = JDBCPool.pool(vertx, config)
+            val options = JDBCConnectOptions()
+                .setJdbcUrl("jdbc:clickhouse:$host/$name")
+                .setUser(username)
+                .setPassword(password)
+
+            val poolOptions = PoolOptions()
+                .setShared(true)
+                .setName("parsek")
+                .setMaxSize(100)
+
+            pool = JDBCPool.pool(vertx, options, poolOptions)
         }
 
         try {
@@ -78,7 +85,7 @@ class DatabaseManager(
         }
     }
 
-    private suspend fun initSchemeVersion(plugin: ParsekPlugin, jdbcPool: JDBCPool) {
+    private suspend fun initSchemeVersion(plugin: ParsekPlugin, jdbcPool: Pool) {
         val lastSchemeVersion = schemeVersionDaoImpl.getLastSchemeVersion(plugin.pluginId, jdbcPool)
 
         val latestMigration = getLatestMigration(plugin)
@@ -110,7 +117,7 @@ class DatabaseManager(
         )
     }
 
-    private suspend fun initPluginDB(plugin: ParsekPlugin, jdbcPool: JDBCPool) {
+    private suspend fun initPluginDB(plugin: ParsekPlugin, jdbcPool: Pool) {
         initSchemeVersion(plugin, jdbcPool)
 
         initTables(plugin)
@@ -133,7 +140,7 @@ class DatabaseManager(
         databaseHelper?.tables?.let { this.tables[plugin]!!.addAll(it) }
         databaseHelper?.migrations?.let { this.migrations[plugin]!!.addAll(it) }
 
-        val jdbcPool: JDBCPool
+        val jdbcPool: Pool
 
         try {
             jdbcPool = getConnectionPool()
@@ -189,7 +196,7 @@ class DatabaseManager(
 
     internal fun getLatestMigration(plugin: ParsekPlugin) = migrations[plugin]?.maxByOrNull { it.SCHEME_VERSION }
 
-    suspend fun checkMigration(plugin: ParsekPlugin, jdbcPool: JDBCPool, lastSchemeVersion: SchemeVersion?) {
+    suspend fun checkMigration(plugin: ParsekPlugin, jdbcPool: Pool, lastSchemeVersion: SchemeVersion?) {
         logger.info("Checking available database migrations for \"${plugin.pluginId}\"")
 
         val databaseVersion = lastSchemeVersion?.version ?: 0
@@ -203,7 +210,7 @@ class DatabaseManager(
         migrate(plugin, jdbcPool, databaseVersion)
     }
 
-    private suspend fun updateSchemeVersion(version: Int, info: String, plugin: ParsekPlugin, jdbcPool: JDBCPool) {
+    private suspend fun updateSchemeVersion(version: Int, info: String, plugin: ParsekPlugin, jdbcPool: Pool) {
         schemeVersionDaoImpl.add(
             SchemeVersion(
                 pluginId = plugin.pluginId,
@@ -214,7 +221,7 @@ class DatabaseManager(
         )
     }
 
-    private suspend fun migrate(plugin: ParsekPlugin, jdbcPool: JDBCPool, databaseVersion: Int) {
+    private suspend fun migrate(plugin: ParsekPlugin, jdbcPool: Pool, databaseVersion: Int) {
         migrations[plugin]!!
             .find { it.isMigratable(databaseVersion) }
             ?.let {

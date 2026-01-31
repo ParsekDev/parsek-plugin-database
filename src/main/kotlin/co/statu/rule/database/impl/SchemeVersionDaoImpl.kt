@@ -4,14 +4,15 @@ import co.statu.parsek.api.ParsekPlugin
 import co.statu.rule.database.dao.SchemeVersionDao
 import co.statu.rule.database.model.SchemeVersion
 import io.vertx.jdbcclient.JDBCPool
-import io.vertx.kotlin.coroutines.await
+import io.vertx.sqlclient.Pool
+import io.vertx.kotlin.coroutines.*
 import io.vertx.sqlclient.Row
 import io.vertx.sqlclient.RowSet
 import io.vertx.sqlclient.Tuple
 
 class SchemeVersionDaoImpl : SchemeVersionDao() {
 
-    override suspend fun init(jdbcPool: JDBCPool, plugin: ParsekPlugin) {
+    override suspend fun init(jdbcPool: Pool, plugin: ParsekPlugin) {
         jdbcPool
             .query(
                 """
@@ -24,12 +25,12 @@ class SchemeVersionDaoImpl : SchemeVersionDao() {
                         """
             )
             .execute()
-            .await()
+            .coAwait()
     }
 
     override suspend fun add(
         schemeVersion: SchemeVersion,
-        jdbcPool: JDBCPool
+        jdbcPool: Pool
     ) {
         jdbcPool
             .preparedQuery("INSERT INTO `${getTablePrefix() + tableName}` (`pluginId`, `when`, `version`, `extra`) VALUES (?, now(), ?, ?)")
@@ -40,12 +41,12 @@ class SchemeVersionDaoImpl : SchemeVersionDao() {
                     schemeVersion.extra
                 )
             )
-            .await()
+            .coAwait()
     }
 
     override suspend fun getLastSchemeVersion(
         pluginId: String,
-        jdbcPool: JDBCPool
+        jdbcPool: Pool
     ): SchemeVersion? {
         val query =
             "SELECT * FROM `${getTablePrefix() + tableName}` WHERE `pluginId` = ?  ORDER BY `version` DESC LIMIT 1"
@@ -53,7 +54,7 @@ class SchemeVersionDaoImpl : SchemeVersionDao() {
         val rows: RowSet<Row> = jdbcPool
             .preparedQuery(query)
             .execute(Tuple.of(pluginId))
-            .await()
+            .coAwait()
 
         if (rows.size() == 0) {
             return null
@@ -67,7 +68,7 @@ class SchemeVersionDaoImpl : SchemeVersionDao() {
     override suspend fun renamePluginId(
         exPluginId: String,
         newPluginId: String,
-        jdbcPool: JDBCPool
+        jdbcPool: Pool
     ) {
         val query =
             "ALTER TABLE `${getTablePrefix() + tableName}` UPDATE `pluginId` = ? WHERE `pluginId` = ?;"
@@ -75,6 +76,6 @@ class SchemeVersionDaoImpl : SchemeVersionDao() {
         jdbcPool
             .preparedQuery(query)
             .execute(Tuple.of(newPluginId, exPluginId))
-            .await()
+            .coAwait()
     }
 }
