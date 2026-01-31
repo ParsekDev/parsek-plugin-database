@@ -2,11 +2,9 @@ package co.statu.rule.database
 
 import co.statu.parsek.api.ParsekPlugin
 import co.statu.parsek.api.config.PluginConfigManager
-import co.statu.rule.database.api.DatabaseHelper
 import co.statu.rule.database.impl.SchemeVersionDaoImpl
 import co.statu.rule.database.model.SchemeVersion
 import io.vertx.core.Vertx
-import io.vertx.core.json.JsonObject
 import io.vertx.jdbcclient.JDBCConnectOptions
 import io.vertx.jdbcclient.JDBCPool
 import io.vertx.sqlclient.Pool
@@ -127,7 +125,6 @@ class DatabaseManager(
 
     suspend fun initialize(
         plugin: ParsekPlugin,
-        databaseHelper: DatabaseHelper? = null
     ) {
         if (this.tables[plugin] == null) {
             this.tables[plugin] = mutableListOf()
@@ -137,8 +134,8 @@ class DatabaseManager(
             this.migrations[plugin] = mutableListOf()
         }
 
-        databaseHelper?.tables?.let { this.tables[plugin]!!.addAll(it) }
-        databaseHelper?.migrations?.let { this.migrations[plugin]!!.addAll(it) }
+        this.tables[plugin] = plugin.pluginBeanContext.getBeansOfType(Dao::class.java).values.map { it as Dao }.toMutableList()
+        this.migrations[plugin] = plugin.pluginBeanContext.getBeansOfType(DatabaseMigration::class.java).values.map { it as DatabaseMigration }.toMutableList()
 
         val jdbcPool: Pool
 
@@ -155,7 +152,7 @@ class DatabaseManager(
 
         try {
             lastSchemeVersion = schemeVersionDaoImpl.getLastSchemeVersion(plugin.pluginId, jdbcPool)
-        } catch (e: BatchUpdateException) {
+        } catch (_: BatchUpdateException) {
             try {
                 if (plugin is DatabasePlugin) {
                     logger.warn("First time installing scheme version (first time app installation)")
@@ -183,9 +180,9 @@ class DatabaseManager(
         checkMigration(plugin, jdbcPool, lastSchemeVersion)
     }
 
-    suspend fun migrateNewPluginId(exPluginId: String, newPluginId: String, plugin: ParsekPlugin) {
+    suspend fun migrateNewPluginId(exPluginId: String, plugin: ParsekPlugin) {
         try {
-            schemeVersionDaoImpl.renamePluginId(exPluginId, newPluginId, getConnectionPool())
+            schemeVersionDaoImpl.renamePluginId(exPluginId, plugin.pluginId, getConnectionPool())
         } catch (e: Exception) {
             if (plugin !is DatabasePlugin) {
                 logger.error(e.message)

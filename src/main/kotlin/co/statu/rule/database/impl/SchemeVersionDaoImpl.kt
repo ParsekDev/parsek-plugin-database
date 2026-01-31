@@ -3,7 +3,6 @@ package co.statu.rule.database.impl
 import co.statu.parsek.api.ParsekPlugin
 import co.statu.rule.database.dao.SchemeVersionDao
 import co.statu.rule.database.model.SchemeVersion
-import io.vertx.jdbcclient.JDBCPool
 import io.vertx.sqlclient.Pool
 import io.vertx.kotlin.coroutines.*
 import io.vertx.sqlclient.Row

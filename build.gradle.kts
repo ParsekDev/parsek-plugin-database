@@ -74,11 +74,11 @@ tasks {
         val pluginDependencies: String by project
 
         manifest {
-            attributes["Plugin-Class"] = pluginClass
-            attributes["Plugin-Id"] = pluginId
-            attributes["Plugin-Version"] = version
-            attributes["Plugin-Provider"] = pluginProvider
-            attributes["Plugin-Dependencies"] = pluginDependencies
+            attributes["main-class"] = pluginClass
+            attributes["id"] = pluginId
+            attributes["version"] = version
+            attributes["developer"] = pluginProvider
+            attributes["dependencies"] = pluginDependencies
         }
 
         if (version != "unspecified") {
