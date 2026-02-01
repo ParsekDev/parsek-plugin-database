@@ -27,7 +27,11 @@ repositories {
 
 dependencies {
     if (bootstrap) {
-        compileOnly(project(mapOf("path" to ":Parsek")))
+        if (findProject(":Parsek") != null) {
+            compileOnly(project(":Parsek"))
+        } else {
+            compileOnly(fileTree(rootDir) { include("Parsek*.jar") })
+        }
     } else {
         compileOnly("dev.parsek:core:1.0.0-beta.19")
     }
