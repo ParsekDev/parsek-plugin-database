@@ -105,7 +105,7 @@ tasks {
 
     register("copyJar") {
         outputs.upToDateWhen { false }
-        mustRunAfter(shadowJar)
+        dependsOn(shadowJar)
 
         pluginsDir?.let {
             doLast {
