@@ -130,9 +130,9 @@ tasks.named<Jar>("jar") {
 }
 
 java {
-    // Use Java 21 for compilation
+    // Use Java 17 for compilation
     toolchain {
-        languageVersion.set(JavaLanguageVersion.of(21))
+        languageVersion.set(JavaLanguageVersion.of(17))
     }
 
     withJavadocJar()
@@ -159,7 +159,7 @@ tasks.named<Jar>("javadocJar") {
 }
 
 kotlin {
-    jvmToolchain(21) // Ensure Kotlin uses the Java 21 toolchain
+    jvmToolchain(17) // Ensure Kotlin uses the Java 17 toolchain
 }
 
 tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
