@@ -1,10 +1,10 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
-    kotlin("jvm") version "2.3.0"
-    kotlin("kapt") version "2.3.0"
-    id("com.gradleup.shadow") version "9.3.1"
-    id("org.jreleaser") version "1.14.0"
+    kotlin("jvm") version "2.4.21"
+    kotlin("kapt") version "2.4.21"
+    id("com.gradleup.shadow") version "9.6.1"
+    id("org.jreleaser") version "1.26.0"
     `maven-publish`
     signing
 }
@@ -13,13 +13,13 @@ group = "dev.parsek"
 version =
     (if (project.hasProperty("version") && project.findProperty("version") != "unspecified") project.findProperty("version") else "local-build")!!
 
-val pf4jVersion: String by project
-val vertxVersion: String by project
-val gsonVersion: String by project
-val springContextVersion: String by project
-val handlebarsVersion: String by project
+val pf4jVersion = project.property("pf4jVersion") as String
+val vertxVersion = project.property("vertxVersion") as String
+val gsonVersion = project.property("gsonVersion") as String
+val springContextVersion = project.property("springContextVersion") as String
+val handlebarsVersion = project.property("handlebarsVersion") as String
 val bootstrap = (project.findProperty("bootstrap") as String?)?.toBoolean() ?: false
-val pluginsDir: File? by rootProject.extra
+val pluginsDir = rootProject.extra.properties["pluginsDir"] as File?
 
 repositories {
     mavenCentral()
@@ -43,9 +43,16 @@ dependencies {
     kapt("org.pf4j:pf4j:${pf4jVersion}")
 
     compileOnly("io.vertx:vertx-lang-kotlin:$vertxVersion")
+
+    // Vert.x 5.1+ moved @Nullable to vertx-codegen-api; Kotlin 2.4 needs it on the classpath for inferred types
+
+    compileOnly("io.vertx:vertx-codegen-api:$vertxVersion")
     compileOnly("io.vertx:vertx-lang-kotlin-coroutines:$vertxVersion")
 
-    implementation("io.vertx:vertx-jdbc-client:$vertxVersion")
+    implementation("io.vertx:vertx-jdbc-client:$vertxVersion") {
+        // vertx-jdbc-client 5.x pulls the Oracle driver (~7 MB); only ClickHouse is used
+        exclude(group = "com.oracle.database.jdbc")
+    }
 
     // https://mvnrepository.com/artifact/com.clickhouse/clickhouse-jdbc
     implementation("com.clickhouse:clickhouse-jdbc:0.6.0")
@@ -53,11 +60,13 @@ dependencies {
     // https://mvnrepository.com/artifact/com.google.code.gson/gson
     compileOnly("com.google.code.gson:gson:$gsonVersion")
 
-    // https://mvnrepository.com/artifact/org.lz4/lz4-java
-    implementation("org.lz4:lz4-java:1.8.0")
+    // Maintained fork of org.lz4:lz4-java (same net.jpountz package clickhouse-jdbc 0.6.0 needs, CVE-2025-12183 fixed)
+    implementation("at.yawk.lz4:lz4-java:1.12.0")
 
     // https://mvnrepository.com/artifact/org.apache.httpcomponents.client5/httpclient5
-    implementation("org.apache.httpcomponents.client5:httpclient5:5.3")
+    implementation("org.apache.httpcomponents.client5:httpclient5:5.6.5")
+    implementation("org.apache.httpcomponents.core5:httpcore5:5.4.4")
+    implementation("org.apache.httpcomponents.core5:httpcore5-h2:5.4.4")
 
     // https://mvnrepository.com/artifact/org.springframework/spring-context
     compileOnly("org.springframework:spring-context:$springContextVersion")
@@ -72,10 +81,10 @@ tasks {
     }
 
     shadowJar {
-        val pluginId: String by project
-        val pluginClass: String by project
-        val pluginProvider: String by project
-        val pluginDependencies: String by project
+        val pluginId = project.property("pluginId") as String
+        val pluginClass = project.property("pluginClass") as String
+        val pluginProvider = project.property("pluginProvider") as String
+        val pluginDependencies = project.property("pluginDependencies") as String
 
         manifest {
             attributes["main-class"] = pluginClass
@@ -98,7 +107,9 @@ tasks {
         dependencies {
             exclude(dependency("io.vertx:vertx-core"))
             exclude {
-                it.moduleGroup == "io.netty" || it.moduleGroup == "org.slf4j"
+                // The host (Parsek.jar) provides Netty, slf4j, Jackson 2 and vertx-core-logging (split out of vertx-core in 5.1)
+                it.moduleGroup == "io.netty" || it.moduleGroup == "org.slf4j" ||
+                    it.moduleGroup == "com.fasterxml.jackson.core" || it.moduleName == "vertx-core-logging"
             }
         }
     }
